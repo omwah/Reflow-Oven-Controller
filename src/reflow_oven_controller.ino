@@ -314,8 +314,20 @@ void loop()
 
         // If currently in error state
         if (reflowState == REFLOW_STATE_ERROR) {
-            // No thermocouple wire connected
-            lcd.print("TC Error!");
+            // Indicate which error condition is occuring
+            switch (input) {
+            case FAULT_OPEN:
+                lcd.print("Open Err");
+                break;
+            case FAULT_SHORT_GND:
+                lcd.print("GND Err");
+                break;
+            case FAULT_SHORT_VCC:
+                lcd.print("VCC Err");
+                break;
+            default:
+                lcd.print("?Error?");
+            }
         } else {
             // Print current temperature
             lcd.print(input);

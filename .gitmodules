@@ -1,0 +1,6 @@
+[submodule "lib/MAX31855"]
+	path = lib/MAX31855
+	url = https://github.com/rocketscream/MAX31855
+[submodule "lib/PID"]
+	path = lib/PID
+	url = git@github.com:br3ttb/Arduino-PID-Library.git
