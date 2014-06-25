@@ -315,17 +315,14 @@ void loop()
         // If currently in error state
         if (reflowState == REFLOW_STATE_ERROR) {
             // Indicate which error condition is occuring
-            switch (input) {
-            case FAULT_OPEN:
+            if (input == FAULT_OPEN) {
                 lcd.print("Open Err");
-                break;
-            case FAULT_SHORT_GND:
+            } else if (input == FAULT_SHORT_GND) {
                 lcd.print("GND Err");
-                break;
-            case FAULT_SHORT_VCC:
+            } else if (input == FAULT_SHORT_VCC) {
                 lcd.print("VCC Err");
-                break;
-            default:
+            } else {
+                // Unknown error
                 lcd.print("?Error?");
             }
         } else {
