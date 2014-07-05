@@ -296,11 +296,11 @@ void loop()
             timerSeconds++;
             // Send temperature and time stamp to serial
             Serial.print(timerSeconds);
-            Serial.print(" ");
+            Serial.print(",");
             Serial.print(setpoint);
-            Serial.print(" ");
+            Serial.print(",");
             Serial.print(input);
-            Serial.print(" ");
+            Serial.print(",");
             Serial.println(output);
         } else {
             // Turn off red LED
@@ -353,7 +353,7 @@ void loop()
             // If switch is pressed to start reflow process
             if (switchStatus == SWITCH_1) {
                 // Send header for CSV file
-                Serial.println("Time Setpoint Input Output");
+                Serial.println("Time,Setpoint,Input,Output");
                 // Intialize seconds timer for serial debug information
                 timerSeconds = 0;
                 // Initialize PID control window starting time
