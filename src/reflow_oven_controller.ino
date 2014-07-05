@@ -135,7 +135,7 @@ typedef enum DEBOUNCE_STATE {
 
 // Temperature constants for Pb-Free Operation
 #define TEMPERATURE_SOAK_MIN 150
-#define TEMPERATURE_SOAK_MAX 200
+#define TEMPERATURE_SOAK_MAX 180
 #define TEMPERATURE_REFLOW_MAX 250
 #define TEMPERATURE_COOL_MIN 100
 
@@ -366,7 +366,7 @@ void loop()
                 // Initialize PID control window starting time
                 windowStartTime = millis();
                 // Ramp up to minimum soaking temperature
-                setpoint = TEMPERATURE_SOAK_MIN;
+                setpoint = TEMPERATURE_SOAK_MIN + SOAK_TEMPERATURE_STEP;
                 // Tell the PID to range between 0 and the full window size
                 reflowOvenPID.SetOutputLimits(0, windowSize);
                 reflowOvenPID.SetSampleTime(PID_SAMPLE_TIME);
@@ -392,6 +392,8 @@ void loop()
             setpoint = TEMPERATURE_SOAK_MIN + SOAK_TEMPERATURE_STEP;
             // Proceed to soaking state
             reflowState = REFLOW_STATE_SOAK;
+
+            Serial.println("Begin soak");
         }
 
         break;
@@ -411,6 +413,8 @@ void loop()
                 setpoint = TEMPERATURE_REFLOW_MAX;
                 // Proceed to reflowing state
                 reflowState = REFLOW_STATE_REFLOW;
+
+                Serial.println("Begin reflow");
             }
         }
 
@@ -427,6 +431,8 @@ void loop()
             setpoint = TEMPERATURE_COOL_MIN;
             // Proceed to cooling state
             reflowState = REFLOW_STATE_COOL;
+
+            Serial.println("Begin cool");
         }
 
         break;
@@ -443,6 +449,8 @@ void loop()
             reflowStatus = REFLOW_STATUS_OFF;
             // Proceed to reflow Completion state
             reflowState = REFLOW_STATE_COMPLETE;
+
+            Serial.println("Complete");
         }
 
         break;
