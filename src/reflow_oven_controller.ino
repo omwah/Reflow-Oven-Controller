@@ -154,6 +154,9 @@ typedef enum DEBOUNCE_STATE {
 #define PID_KD_REFLOW 350
 #define PID_SAMPLE_TIME 1000
 
+// Maximum number of reading errors before going back to idle
+#define MAX_NUM_ERRORS 5
+
 // ***** LCD MESSAGES *****
 const char* lcdMessagesReflowStatus[] = {
     "Ready",
@@ -211,6 +214,8 @@ long lastDebounceTime;
 switch_t switchStatus;
 // Seconds timer
 int timerSeconds;
+// Number of errors during reflow process
+int numErrors;
 
 // Specify PID control interface
 PID reflowOvenPID(&input, &output, &setpoint, kp, ki, kd, DIRECT);
@@ -356,6 +361,8 @@ void loop()
                 Serial.println("Time,Setpoint,Input,Output");
                 // Intialize seconds timer for serial debug information
                 timerSeconds = 0;
+                // Reset number of errors encountered
+                numErrors = 0;
                 // Initialize PID control window starting time
                 windowStartTime = millis();
                 // Ramp up to minimum soaking temperature
@@ -462,6 +469,8 @@ void loop()
         break;
 
     case REFLOW_STATE_ERROR:
+        numErrors++;
+
         // If thermocouple problem is still present
         if((input == FAULT_OPEN) || (input == FAULT_SHORT_GND) ||
                 (input == FAULT_SHORT_VCC))
@@ -469,8 +478,15 @@ void loop()
             // Wait until thermocouple wire is connected
             reflowState = REFLOW_STATE_ERROR;
         } else {
-            // Clear to perform reflow process
-            reflowState = REFLOW_STATE_IDLE;
+            // Unknown error encountered
+
+            if (numErrors > MAX_NUM_ERRORS) {
+                // Clear to perform reflow process
+                reflowState = REFLOW_STATE_IDLE;
+            } else {
+                // Wait to see if errors persist
+                reflowState = REFLOW_STATE_ERROR;
+            }
         }
 
         break;
