@@ -127,17 +127,27 @@ typedef enum DEBOUNCE_STATE {
 } debounceState_t;
 
 // ***** CONSTANTS *****
-#define TEMPERATURE_ROOM 50
+#define TEMPERATURE_ROOM 100
 #define SENSOR_SAMPLING_TIME 1000
 #define SOAK_TEMPERATURE_STEP 5
-#define SOAK_MICRO_PERIOD 9000
 #define DEBOUNCE_PERIOD_MIN 50
 
-// Temperature constants for Pb-Free Operation
-#define TEMPERATURE_SOAK_MIN 150
-#define TEMPERATURE_SOAK_MAX 180
-#define TEMPERATURE_REFLOW_MAX 250
+#define SOAK_PERIOD 90000
+#define REFLOW_PERIOD 60000
 #define TEMPERATURE_COOL_MIN 100
+
+// Temperature constants for Pb-Free Operation
+//#define TEMPERATURE_SOAK_MIN 150
+//#define TEMPERATURE_SOAK_MAX 200
+//#define TEMPERATURE_REFLOW_MAX 250
+
+// Temperature constants for Sn63 Pb37 - 183 + 20
+#define TEMPERATURE_SOAK_MIN 150
+#define TEMPERATURE_SOAK_MAX 150
+#define TEMPERATURE_REFLOW_MAX 215
+
+#define TEMPERATURE_SOAK_DIFF TEMPERATURE_SOAK_MAX - TEMPERATURE_SOAK_MIN
+#define SOAK_MICRO_PERIOD TEMPERATURE_SOAK_DIFF > 0 ? SOAK_PERIOD / (TEMPERATURE_SOAK_DIFF / SOAK_TEMPERATURE_STEP) : 0
 
 // ***** PID PARAMETERS *****
 // ***** PRE-HEAT STAGE *****
@@ -201,6 +211,8 @@ unsigned long windowStartTime;
 unsigned long nextCheck;
 unsigned long nextRead;
 unsigned long timerSoak;
+unsigned long timerPeriod;
+unsigned long reflowPeriod;
 unsigned long buzzerPeriod;
 // Reflow oven controller state machine state variable
 reflowState_t reflowState;
@@ -214,8 +226,6 @@ long lastDebounceTime;
 switch_t switchStatus;
 // Seconds timer
 int timerSeconds;
-// Number of errors during reflow process
-int numErrors;
 
 // Specify PID control interface
 PID reflowOvenPID(&input, &output, &setpoint, kp, ki, kd, DIRECT);
@@ -319,19 +329,16 @@ void loop()
         // Move the cursor to the 2 line
         lcd.setCursor(0, 1);
 
-        // If currently in error state
-        if (reflowState == REFLOW_STATE_ERROR) {
-            // Indicate which error condition is occuring
-            if (input == FAULT_OPEN) {
-                lcd.print("Open Err");
-            } else if (input == FAULT_SHORT_GND) {
-                lcd.print("GND Err");
-            } else if (input == FAULT_SHORT_VCC) {
-                lcd.print("VCC Err");
-            } else {
-                // Unknown error
-                lcd.print("?Error?");
-            }
+        // Indicate which error condition is occuring
+        if (input == FAULT_OPEN) {
+            lcd.print("Open Err");
+            Serial.println("Temperature fault: open error");
+        } else if (input == FAULT_SHORT_GND) {
+            lcd.print("GND Err");
+            Serial.println("Temperature fault: ground short error");
+        } else if (input == FAULT_SHORT_VCC) {
+            lcd.print("VCC Err");
+            Serial.println("Temperature fault: vcc short error");
         } else {
             // Print current temperature
             lcd.print(input);
@@ -361,8 +368,6 @@ void loop()
                 Serial.println("Time,Setpoint,Input,Output");
                 // Intialize seconds timer for serial debug information
                 timerSeconds = 0;
-                // Reset number of errors encountered
-                numErrors = 0;
                 // Initialize PID control window starting time
                 windowStartTime = millis();
                 // Ramp up to minimum soaking temperature
@@ -384,12 +389,15 @@ void loop()
 
         // If minimum soak temperature is achieve
         if (input >= TEMPERATURE_SOAK_MIN) {
-            // Chop soaking period into smaller sub-period
+            // Chop soaking period into smaller sub-period, if there is a min and max
+            // for the soak period
             timerSoak = millis() + SOAK_MICRO_PERIOD;
+            // Set maximum period for soak step
+            timerPeriod = millis() + SOAK_PERIOD;
             // Set less agressive PID parameters for soaking ramp
             reflowOvenPID.SetTunings(PID_KP_SOAK, PID_KI_SOAK, PID_KD_SOAK);
             // Ramp up to first section of soaking temperature
-            setpoint = TEMPERATURE_SOAK_MIN + SOAK_TEMPERATURE_STEP;
+            setpoint = TEMPERATURE_SOAK_MIN;
             // Proceed to soaking state
             reflowState = REFLOW_STATE_SOAK;
 
@@ -401,30 +409,35 @@ void loop()
     case REFLOW_STATE_SOAK:
 
         // If micro soak temperature is achieved
-        if (millis() > timerSoak) {
+        if (SOAK_MICRO_PERIOD > 0 && millis() > timerSoak) {
             timerSoak = millis() + SOAK_MICRO_PERIOD;
+
             // Increment micro setpoint
             setpoint += SOAK_TEMPERATURE_STEP;
+        }
 
-            if (setpoint > TEMPERATURE_SOAK_MAX) {
-                // Set agressive PID parameters for reflow ramp
-                reflowOvenPID.SetTunings(PID_KP_REFLOW, PID_KI_REFLOW, PID_KD_REFLOW);
-                // Ramp up to first section of soaking temperature
-                setpoint = TEMPERATURE_REFLOW_MAX;
-                // Proceed to reflowing state
-                reflowState = REFLOW_STATE_REFLOW;
+        if (millis() > timerPeriod) {
+            // Set agressive PID parameters for reflow ramp
+            reflowOvenPID.SetTunings(PID_KP_REFLOW, PID_KI_REFLOW, PID_KD_REFLOW);
+            // Ramp up to first section of soaking temperature
+            setpoint = TEMPERATURE_REFLOW_MAX;
+            // Proceed to reflowing state
+            reflowState = REFLOW_STATE_REFLOW;
 
-                Serial.println("Begin reflow");
-            }
+            Serial.println("Begin reflow");
         }
 
         break;
 
     case REFLOW_STATE_REFLOW:
 
-        // We need to avoid hovering at peak temperature for too long
-        // Crude method that works like a charm and safe for the components
-        if (input >= (TEMPERATURE_REFLOW_MAX - 5)) {
+        if(input < TEMPERATURE_REFLOW_MAX - 5) {
+            // Set period for reflow state
+            reflowPeriod = millis() + REFLOW_PERIOD;
+        }
+        
+        // Start cool down when time has passed for reflow
+        if (millis() > reflowPeriod) {
             // Set PID parameters for cooling ramp
             reflowOvenPID.SetTunings(PID_KP_REFLOW, PID_KI_REFLOW, PID_KD_REFLOW);
             // Ramp down to minimum cooling temperature
@@ -477,7 +490,6 @@ void loop()
         break;
 
     case REFLOW_STATE_ERROR:
-        numErrors++;
 
         // If thermocouple problem is still present
         if((input == FAULT_OPEN) || (input == FAULT_SHORT_GND) ||
@@ -486,15 +498,8 @@ void loop()
             // Wait until thermocouple wire is connected
             reflowState = REFLOW_STATE_ERROR;
         } else {
-            // Unknown error encountered
-
-            if (numErrors > MAX_NUM_ERRORS) {
-                // Clear to perform reflow process
-                reflowState = REFLOW_STATE_IDLE;
-            } else {
-                // Wait to see if errors persist
-                reflowState = REFLOW_STATE_ERROR;
-            }
+            // Clear to perform reflow process
+            reflowState = REFLOW_STATE_IDLE;
         }
 
         break;
