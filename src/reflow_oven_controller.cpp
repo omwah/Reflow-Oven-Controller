@@ -80,8 +80,8 @@ int thermocoupleCSPin = A2;
 int thermocoupleCLKPin = A1;
 MAX31855 thermocouple(thermocoupleSOPin, thermocoupleCSPin, thermocoupleCLKPin);
 
-LeadedSettings reflow_settings();
-Reflow reflow(ledRedPin, ssrPin, buzzerPin, reflow_settings);
+LeadedSettings reflow_settings = LeadedSettings();
+Reflow reflow = Reflow(ledRedPin, ssrPin, buzzerPin, &reflow_settings);
 
 void setup()
 {
@@ -144,7 +144,7 @@ void loop()
         lcd.clear();
 
         // Print current system state
-        reflow.write_lcd_message();
+        reflow.write_lcd_message(lcd);
 
         // Move the cursor to the 2 line
         lcd.setCursor(0, 1);

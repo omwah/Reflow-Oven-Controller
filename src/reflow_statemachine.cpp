@@ -74,12 +74,24 @@
 
 #include "reflow_statemachine.h"
 
-Reflow::Reflow(int LedPin, int SSRPin, int BuzzerPin, ReflowSettings& Settings) : led_pin(LedPin), ssr_pin(SSRPin), buzzer_pin(BuzzerPin), settings(Settings)
+// These should match index of REFLOW_STATE
+const char* lcdMessagesReflowStatus[] = {
+    "Ready",
+    "Pre-heat",
+    "Soak",
+    "Reflow",
+    "Cool",
+    "Complete",
+    "Wait,hot",
+    "Error"
+};
+
+Reflow::Reflow(int LedPin, int SSRPin, int BuzzerPin, ReflowSettings* Settings) : led_pin(LedPin), ssr_pin(SSRPin), buzzer_pin(BuzzerPin), settings(Settings)
 {
     // Initial values for PID params
-    kp = settings.pid_kp_preheat;
-    ki = settings.pid_ki_preheat;
-    kd = settings.pid_kd_preheat;
+    kp = settings->pid_kp_preheat;
+    ki = settings->pid_ki_preheat;
+    kd = settings->pid_kd_preheat;
 
     // Specify PID control interface
     reflowOvenPID = new PID(&input, &output, &setpoint, kp, ki, kd, DIRECT);
@@ -154,11 +166,11 @@ void Reflow::begin()
     windowStartTime = millis();
 
     // Ramp up to minimum soaking temperature
-    setpoint = settings.temperature_soak_min + settings.soak_temperature_step;
+    setpoint = settings->temperature_soak_min + settings->soak_temperature_step;
 
     // Tell the PID to range between 0 and the full window size
     reflowOvenPID->SetOutputLimits(0, windowSize);
-    reflowOvenPID->SetSampleTime(settings.pid_sample_time);
+    reflowOvenPID->SetSampleTime(settings->pid_sample_time);
 
     // Turn the PID on
     reflowOvenPID->SetMode(AUTOMATIC);
@@ -178,7 +190,7 @@ void Reflow::end()
 void Reflow::idle_state()
 {
     // If oven temperature is still above room temperature
-    if (input >= settings.temperature_room) {
+    if (input >= settings->temperature_room) {
         reflowState = REFLOW_STATE_TOO_HOT;
     }
 }
@@ -188,21 +200,21 @@ void Reflow::preheat_state()
     reflowStatus = REFLOW_STATUS_ON;
 
     // If minimum soak temperature is achieve
-    if (input >= settings.temperature_soak_min) {
+    if (input >= settings->temperature_soak_min) {
         // Chop soaking period into smaller sub-period, if there is a min and max
         // for the soak period
-        timerSoak = millis() + settings.soak_micro_period;
+        timerSoak = millis() + settings->soak_micro_period;
 
         // Set maximum period for soak step
-        timerPeriod = millis() + settings.soak_period;
+        timerPeriod = millis() + settings->soak_period;
 
         // Set less agressive PID parameters for soaking ramp
-        reflowOvenPID->SetTunings(settings.pid_kp_soak,
-                                  settings.pid_ki_soak, 
-                                  settings.pid_kd_soak);
+        reflowOvenPID->SetTunings(settings->pid_kp_soak,
+                                  settings->pid_ki_soak, 
+                                  settings->pid_kd_soak);
 
         // Ramp up to first section of soaking temperature
-        setpoint = settings.temperature_soak_min;
+        setpoint = settings->temperature_soak_min;
 
         // Proceed to soaking state
         reflowState = REFLOW_STATE_SOAK;
@@ -214,21 +226,21 @@ void Reflow::preheat_state()
 void Reflow::soak_state()
 {
     // If micro soak temperature is achieved
-    if (settings.soak_micro_period > 0 && millis() > timerSoak) {
-        timerSoak = millis() + settings.soak_micro_period;
+    if (settings->soak_micro_period > 0 && millis() > timerSoak) {
+        timerSoak = millis() + settings->soak_micro_period;
 
         // Increment micro setpoint
-        setpoint += settings.soak_temperature_step;
+        setpoint += settings->soak_temperature_step;
     }
 
     if (millis() > timerPeriod) {
         // Set agressive PID parameters for reflow ramp
-        reflowOvenPID->SetTunings(settings.pid_kp_reflow, 
-                                  settings.pid_ki_reflow,
-                                  settings.pid_kd_reflow);
+        reflowOvenPID->SetTunings(settings->pid_kp_reflow, 
+                                  settings->pid_ki_reflow,
+                                  settings->pid_kd_reflow);
 
         // Ramp up to first section of soaking temperature
-        setpoint = settings.temperature_reflow_max;
+        setpoint = settings->temperature_reflow_max;
 
         // Proceed to reflowing state
         reflowState = REFLOW_STATE_REFLOW;
@@ -240,20 +252,20 @@ void Reflow::soak_state()
 
 void Reflow::reflow_state()
 {
-    if(input < settings.temperature_reflow_max - 5) {
+    if(input < settings->temperature_reflow_max - 5) {
         // Set period for reflow state
-        reflowPeriod = millis() + settings.reflow_period;
+        reflowPeriod = millis() + settings->reflow_period;
     }
     
     // Start cool down when time has passed for reflow
     if (millis() > reflowPeriod) {
         // Set PID parameters for cooling ramp
-        reflowOvenPID->SetTunings(settings.pid_kp_reflow, 
-                                  settings.pid_ki_reflow,
-                                  settings.pid_kd_reflow);
+        reflowOvenPID->SetTunings(settings->pid_kp_reflow, 
+                                  settings->pid_ki_reflow,
+                                  settings->pid_kd_reflow);
 
         // Ramp down to minimum cooling temperature
-        setpoint = settings.temperature_cool_min;
+        setpoint = settings->temperature_cool_min;
 
         // Proceed to cooling state
         reflowState = REFLOW_STATE_COOL;
@@ -266,7 +278,7 @@ void Reflow::cool_state()
 {
 
     // If minimum cool temperature is achieve
-    if (input <= settings.temperature_cool_min) {
+    if (input <= settings->temperature_cool_min) {
         // Retrieve current time for buzzer usage
         buzzerPeriod = millis() + 1000;
 
@@ -300,7 +312,7 @@ void Reflow::too_hot_state()
 {
 
     // If oven temperature drops below room temperature
-    if (input < settings.temperature_room) {
+    if (input < settings->temperature_room) {
         // Ready to reflow
         reflowState = REFLOW_STATE_IDLE;
     }

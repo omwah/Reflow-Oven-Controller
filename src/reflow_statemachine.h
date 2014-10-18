@@ -1,5 +1,5 @@
-#ifndef REFLOW_STATEMACHINE
-#define REFLOW_STATEMACHINE
+#ifndef REFLOW_STATEMACHINE_H
+#define REFLOW_STATEMACHINE_H
 
 #include <Arduino.h>
 #include <LiquidCrystal.h>
@@ -18,18 +18,6 @@ typedef enum REFLOW_STATE {
     REFLOW_STATE_TOO_HOT,
     REFLOW_STATE_ERROR
 } reflowState_t;
-
-// These should match index of REFLOW_STATE
-const char* lcdMessagesReflowStatus[] = {
-    "Ready",
-    "Pre-heat",
-    "Soak",
-    "Reflow",
-    "Cool",
-    "Complete",
-    "Wait,hot",
-    "Error"
-};
 
 typedef enum REFLOW_STATUS {
     REFLOW_STATUS_OFF,
@@ -81,7 +69,7 @@ struct ReflowSettings {
     }
 
     // Implement this to overide settings
-    virtual void init_settings() = 0;
+    virtual void init_settings() {};
 
     unsigned int pid_sample_time;
 
@@ -113,7 +101,7 @@ struct ReflowSettings {
 };
 
 struct LeadedSettings : public ReflowSettings {
-    void init_settings() {
+    virtual void init_settings() {
         // Temperature constants for Sn63 Pb37 - 183 + 20
         temperature_soak_min = 150;
         temperature_soak_max = 150;
@@ -123,7 +111,7 @@ struct LeadedSettings : public ReflowSettings {
 };
 
 struct LeadedFreeSettings : public ReflowSettings {
-    void init_settings() {
+    virtual void init_settings() {
         // Temperature constants for Pb-Free Operation
         temperature_soak_min = 150;
         temperature_soak_max = 200;
@@ -133,13 +121,13 @@ struct LeadedFreeSettings : public ReflowSettings {
 
 class Reflow : public StateMachine {
     public:
-        Reflow(int LedPin, int SSRPin, int BuzzerPin, ReflowSettings& Settings);
+        Reflow(int LedPin, int SSRPin, int BuzzerPin, ReflowSettings* Settings);
         ~Reflow();
         void check_state(double& new_input);
         void write_lcd_message(LiquidCrystal &lcd);
         void begin();
         void end();
-        void on() { reflowStatus == REFLOW_STATUS_ON; }
+        bool on() { reflowStatus == REFLOW_STATUS_ON; }
 
     private:
         unsigned int led_pin;
@@ -147,7 +135,7 @@ class Reflow : public StateMachine {
         unsigned int buzzer_pin;
 
         // Settings for how to perform reflow
-        ReflowSettings& settings;
+        ReflowSettings* settings;
 
         // These variables are used by the PID controller
         double setpoint;
@@ -188,16 +176,20 @@ class Reflow : public StateMachine {
         // Does setting of SSR output
         void compute_pid();
 
-        BEGIN_STATE_MAP
-            STATE_MAP_ENTRY(idle_state)
-            STATE_MAP_ENTRY(preheat_state)
-            STATE_MAP_ENTRY(soak_state)
-            STATE_MAP_ENTRY(reflow_state)
-            STATE_MAP_ENTRY(cool_state)
-            STATE_MAP_ENTRY(complete_state)
-            STATE_MAP_ENTRY(too_hot_state)
-            STATE_MAP_ENTRY(error_state)
-        END_STATE_MAP
+        const StateStruct* state_map() {
+            StateFunc state_map[10] = { NULL };
+        }
+
+//        BEGIN_STATE_MAP
+//            STATE_MAP_ENTRY(idle_state)
+//            STATE_MAP_ENTRY(preheat_state)
+//            STATE_MAP_ENTRY(soak_state)
+//            STATE_MAP_ENTRY(reflow_state)
+//            STATE_MAP_ENTRY(cool_state)
+//            STATE_MAP_ENTRY(complete_state)
+//            STATE_MAP_ENTRY(too_hot_state)
+//            STATE_MAP_ENTRY(error_state)
+//        END_STATE_MAP
        
 };
 
