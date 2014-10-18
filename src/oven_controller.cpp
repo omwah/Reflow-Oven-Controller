@@ -124,6 +124,9 @@ void setup()
     // Initialize time keeping variables
     nextCheck = millis();
     nextRead = millis();
+
+    // Output reflow settings for debugging
+    reflow_settings.print();
 }
 
 void loop()

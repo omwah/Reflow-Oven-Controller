@@ -71,6 +71,8 @@ struct ReflowSettings {
     // Implement this to overide settings
     virtual void init_settings() {};
 
+    void print();
+
     unsigned int pid_sample_time;
 
     float temperature_room;

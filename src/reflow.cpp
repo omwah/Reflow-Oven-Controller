@@ -86,6 +86,39 @@ const char* lcdMessagesReflowStatus[] = {
     "Error"
 };
 
+void ReflowSettings::print() {
+    Serial.println("Reflow Settings");
+    Serial.println("===============");
+
+    Serial.print("pid_sample_time = "); Serial.println(pid_sample_time);
+
+    Serial.print("temperature_room = "); Serial.println(temperature_room);
+    Serial.print("soak_temperature_step = "); Serial.println(soak_temperature_step);
+
+    Serial.print("soak_period = "); Serial.println(soak_period);
+    Serial.print("reflow_period = "); Serial.println(reflow_period);
+    Serial.print("temperature_cool_min = "); Serial.println(temperature_cool_min);
+
+    Serial.print("temperature_soak_min = "); Serial.println(temperature_soak_min);
+    Serial.print("temperature_soak_max = "); Serial.println(temperature_soak_max);
+    Serial.print("temperature_reflow_max = "); Serial.println(temperature_reflow_max);
+
+    Serial.print("soak_micro_period = "); Serial.println(soak_micro_period);
+
+    Serial.print("pid_kp_preheat = "); Serial.println(pid_kp_preheat);
+    Serial.print("pid_ki_preheat = "); Serial.println(pid_ki_preheat);
+    Serial.print("pid_kd_preheat = "); Serial.println(pid_kd_preheat);
+
+    Serial.print("pid_kp_soak = "); Serial.println(pid_kp_soak);
+    Serial.print("pid_ki_soak = "); Serial.println(pid_ki_soak);
+    Serial.print("pid_kd_soak = "); Serial.println(pid_kd_soak);
+
+    Serial.print("pid_kp_reflow = "); Serial.println(pid_kp_reflow);
+    Serial.print("pid_ki_reflow = "); Serial.println(pid_ki_reflow);
+    Serial.print("pid_kd_reflow = "); Serial.println(pid_kd_reflow);
+    Serial.println("===============");
+}
+
 Reflow::Reflow(int LedPin, int SSRPin, int BuzzerPin, ReflowSettings* Settings) : led_pin(LedPin), ssr_pin(SSRPin), buzzer_pin(BuzzerPin), settings(Settings)
 {
     // Initial values for PID params
