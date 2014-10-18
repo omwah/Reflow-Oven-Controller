@@ -15,7 +15,7 @@
 #include <LiquidCrystal.h>
 #include <MAX31855.h>
 
-#include "reflow_statemachine.h"
+#include "reflow.h"
 
 typedef enum SWITCH {
     SWITCH_NONE,

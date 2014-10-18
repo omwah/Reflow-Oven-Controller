@@ -72,7 +72,7 @@
 #include <Arduino.h>
 #include <MAX31855.h>
 
-#include "reflow_statemachine.h"
+#include "reflow.h"
 
 // These should match index of REFLOW_STATE
 const char* lcdMessagesReflowStatus[] = {

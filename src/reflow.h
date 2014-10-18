@@ -176,20 +176,16 @@ class Reflow : public StateMachine {
         // Does setting of SSR output
         void compute_pid();
 
-        const StateStruct* state_map() {
-            StateFunc state_map[10] = { NULL };
-        }
-
-//        BEGIN_STATE_MAP
-//            STATE_MAP_ENTRY(idle_state)
-//            STATE_MAP_ENTRY(preheat_state)
-//            STATE_MAP_ENTRY(soak_state)
-//            STATE_MAP_ENTRY(reflow_state)
-//            STATE_MAP_ENTRY(cool_state)
-//            STATE_MAP_ENTRY(complete_state)
-//            STATE_MAP_ENTRY(too_hot_state)
-//            STATE_MAP_ENTRY(error_state)
-//        END_STATE_MAP
+        BEGIN_STATE_MAP
+            STATE_MAP_ENTRY(Reflow::idle_state)
+            STATE_MAP_ENTRY(Reflow::preheat_state)
+            STATE_MAP_ENTRY(Reflow::soak_state)
+            STATE_MAP_ENTRY(Reflow::reflow_state)
+            STATE_MAP_ENTRY(Reflow::cool_state)
+            STATE_MAP_ENTRY(Reflow::complete_state)
+            STATE_MAP_ENTRY(Reflow::too_hot_state)
+            STATE_MAP_ENTRY(Reflow::error_state)
+        END_STATE_MAP
        
 };
 
