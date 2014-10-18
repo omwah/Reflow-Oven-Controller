@@ -86,12 +86,12 @@ Reflow reflow = Reflow(ledRedPin, ssrPin, buzzerPin, &reflow_settings);
 void setup()
 {
     // SSR pin initialization to ensure switch oven is off
-    digitalWrite(ssrPin, LOW);
     pinMode(ssrPin, OUTPUT);
+    digitalWrite(ssrPin, LOW);
 
     // Buzzer pin initialization to ensure annoying buzzer is off
-    digitalWrite(buzzerPin, LOW);
     pinMode(buzzerPin, OUTPUT);
+    digitalWrite(buzzerPin, LOW);
 
     // LED pins initialization and turn on upon start-up (active low)
     digitalWrite(ledRedPin, LOW);
@@ -103,14 +103,13 @@ void setup()
     lcd.createChar(0, degree);
     lcd.clear();
 
-    lcd.print("Temp");
+    lcd.print("Oven");
     lcd.setCursor(0, 1);
     lcd.print("Control");
 
     digitalWrite(buzzerPin, LOW);
     delay(2500);
     lcd.clear();
-    digitalWrite(buzzerPin, HIGH);
 
     // Serial communication at 57600 bps
     Serial.begin(57600);
@@ -189,6 +188,8 @@ void loop()
                 break;
             }
         }
+
+        reflow.check_state(input);
     }
 
     // If switch 1 is pressed

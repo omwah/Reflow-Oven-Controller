@@ -131,6 +131,11 @@ Reflow::Reflow(int LedPin, int SSRPin, int BuzzerPin, ReflowSettings* Settings) 
 
     // Set window size
     windowSize = 2000;
+
+    // Initially turned off
+    reflowStatus = REFLOW_STATUS_OFF;
+    reflowState = REFLOW_STATE_IDLE;
+    lastState = REFLOW_STATE_IDLE;
 }
 
 Reflow::~Reflow() {
@@ -176,6 +181,11 @@ void Reflow::check_state(double& new_input)
     }
 
     // Run a specific state's check function
+    if (reflowState != lastState) {
+        Serial.print("# Begin ");
+        Serial.println(lcdMessagesReflowStatus[reflowState]);
+        lastState = reflowState;
+    }
     const StateStruct* p_state_map = state_map();
     (this->*p_state_map[reflowState].state_method)();
 
@@ -216,6 +226,7 @@ void Reflow::end()
 {
     // Turn off reflow process
     reflowStatus = REFLOW_STATUS_OFF;
+
     // Reinitialize state machine
     reflowState = REFLOW_STATE_IDLE;
 }
@@ -251,8 +262,6 @@ void Reflow::preheat_state()
 
         // Proceed to soaking state
         reflowState = REFLOW_STATE_SOAK;
-
-        Serial.println("Begin soak");
     }
 }
 
@@ -277,8 +286,6 @@ void Reflow::soak_state()
 
         // Proceed to reflowing state
         reflowState = REFLOW_STATE_REFLOW;
-
-        Serial.println("Begin reflow");
     }
 }
 
@@ -302,8 +309,6 @@ void Reflow::reflow_state()
 
         // Proceed to cooling state
         reflowState = REFLOW_STATE_COOL;
-
-        Serial.println("Begin cool");
     }
 }
 
@@ -323,8 +328,6 @@ void Reflow::cool_state()
 
         // Proceed to reflow Completion state
         reflowState = REFLOW_STATE_COMPLETE;
-
-        Serial.println("Complete");
     }
 }
 

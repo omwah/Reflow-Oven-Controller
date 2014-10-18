@@ -129,7 +129,7 @@ class Reflow : public StateMachine {
         void write_lcd_message(LiquidCrystal &lcd);
         void begin();
         void end();
-        bool on() { reflowStatus == REFLOW_STATUS_ON; }
+        bool on() { return reflowStatus == REFLOW_STATUS_ON; }
 
     private:
         unsigned int led_pin;
@@ -161,6 +161,7 @@ class Reflow : public StateMachine {
 
         // Reflow oven controller state machine state variable
         reflowState_t reflowState;
+        reflowState_t lastState;
 
         // Reflow oven controller status
         reflowStatus_t reflowStatus; 
