@@ -80,8 +80,9 @@ int thermocoupleCSPin = A2;
 int thermocoupleCLKPin = A1;
 MAX31855 thermocouple(thermocoupleSOPin, thermocoupleCSPin, thermocoupleCLKPin);
 
+// Create settings and reflow object
 LeadedSettings reflow_settings = LeadedSettings();
-Reflow reflow = Reflow(ledRedPin, ssrPin, buzzerPin, &reflow_settings);
+Reflow reflow(ledRedPin, ssrPin, buzzerPin, &reflow_settings);
 
 void setup()
 {
@@ -124,7 +125,8 @@ void setup()
     nextCheck = millis();
     nextRead = millis();
 
-    // Output reflow settings for debugging
+    // Initialized reflow settings and output them for debugging
+    reflow_settings.init();
     reflow_settings.print();
 }
 

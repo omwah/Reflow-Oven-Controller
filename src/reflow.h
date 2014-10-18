@@ -24,14 +24,9 @@ typedef enum REFLOW_STATUS {
     REFLOW_STATUS_ON
 } reflowStatus_t;
 
-struct ReflowSettings {
+class ReflowSettings {
+public:
     ReflowSettings() {
-        init_defaults();
-        init_settings();
-        init_soak_micro();
-    }
-
-    void init_defaults() {
         pid_sample_time = 1000;
 
         temperature_room = 100;
@@ -59,17 +54,10 @@ struct ReflowSettings {
         pid_kd_reflow = 350;
     }
 
-    void init_soak_micro() {
-        float temperature_soak_diff = temperature_soak_max - temperature_soak_min;
-        if (temperature_soak_diff > 0) {
-            soak_micro_period =  soak_period / (temperature_soak_diff / soak_temperature_step);
-        } else {
-            soak_micro_period = 0;
-        }
+    void init() {
+        init_settings();
+        init_soak_micro();
     }
-
-    // Implement this to overide settings
-    virtual void init_settings() {};
 
     void print();
 
@@ -100,9 +88,23 @@ struct ReflowSettings {
     float pid_kp_reflow;
     float pid_ki_reflow;
     float pid_kd_reflow;
+
+protected:
+    void init_soak_micro() {
+        float temperature_soak_diff = temperature_soak_max - temperature_soak_min;
+        if (temperature_soak_diff > 0) {
+            soak_micro_period =  soak_period / (temperature_soak_diff / soak_temperature_step);
+        } else {
+            soak_micro_period = 0;
+        }
+    }
+
+    // Implement this to overide settings
+    virtual void init_settings() = 0;
 };
 
-struct LeadedSettings : public ReflowSettings {
+class LeadedSettings : public ReflowSettings {
+protected:
     virtual void init_settings() {
         // Temperature constants for Sn63 Pb37 - 183 + 20
         temperature_soak_min = 150;
@@ -112,7 +114,8 @@ struct LeadedSettings : public ReflowSettings {
 
 };
 
-struct LeadedFreeSettings : public ReflowSettings {
+class LeadedFreeSettings : public ReflowSettings {
+protected:
     virtual void init_settings() {
         // Temperature constants for Pb-Free Operation
         temperature_soak_min = 150;
@@ -122,74 +125,73 @@ struct LeadedFreeSettings : public ReflowSettings {
 };
 
 class Reflow : public StateMachine {
-    public:
-        Reflow(int LedPin, int SSRPin, int BuzzerPin, ReflowSettings* Settings);
-        ~Reflow();
-        void check_state(double& new_input);
-        void write_lcd_message(LiquidCrystal &lcd);
-        void begin();
-        void end();
-        bool on() { return reflowStatus == REFLOW_STATUS_ON; }
+public:
+    Reflow(int LedPin, int SSRPin, int BuzzerPin, ReflowSettings* Settings);
+    ~Reflow();
+    void check_state(double& new_input);
+    void write_lcd_message(LiquidCrystal &lcd);
+    void begin();
+    void end();
+    bool on() { return reflowStatus == REFLOW_STATUS_ON; }
 
-    private:
-        unsigned int led_pin;
-        unsigned int ssr_pin;
-        unsigned int buzzer_pin;
+private:
+    unsigned int led_pin;
+    unsigned int ssr_pin;
+    unsigned int buzzer_pin;
 
-        // Settings for how to perform reflow
-        ReflowSettings* settings;
+    // Settings for how to perform reflow
+    ReflowSettings* settings;
 
-        // These variables are used by the PID controller
-        double setpoint;
-        double input;
-        double output;
+    // These variables are used by the PID controller
+    double setpoint;
+    double input;
+    double output;
 
-        double kp;
-        double ki;
-        double kd;
+    double kp;
+    double ki;
+    double kd;
 
-        PID* reflowOvenPID;
+    PID* reflowOvenPID;
 
-        // Variables for keeping track of timing during states
-        int windowSize;
-        unsigned int timerSeconds;
-        unsigned long windowStartTime;
-        unsigned long timerSoak;
-        unsigned long timerPeriod;
-        unsigned long reflowPeriod;
-        unsigned long buzzerPeriod;
+    // Variables for keeping track of timing during states
+    int windowSize;
+    unsigned int timerSeconds;
+    unsigned long windowStartTime;
+    unsigned long timerSoak;
+    unsigned long timerPeriod;
+    unsigned long reflowPeriod;
+    unsigned long buzzerPeriod;
 
-        // Reflow oven controller state machine state variable
-        reflowState_t reflowState;
-        reflowState_t lastState;
+    // Reflow oven controller state machine state variable
+    reflowState_t reflowState;
+    reflowState_t lastState;
 
-        // Reflow oven controller status
-        reflowStatus_t reflowStatus; 
+    // Reflow oven controller status
+    reflowStatus_t reflowStatus; 
 
-        // State methods
-        void idle_state();
-        void preheat_state();
-        void soak_state();
-        void reflow_state();
-        void cool_state();
-        void complete_state();
-        void too_hot_state();
-        void error_state();
+    // State methods
+    void idle_state();
+    void preheat_state();
+    void soak_state();
+    void reflow_state();
+    void cool_state();
+    void complete_state();
+    void too_hot_state();
+    void error_state();
 
-        // Does setting of SSR output
-        void compute_pid();
+    // Does setting of SSR output
+    void compute_pid();
 
-        BEGIN_STATE_MAP
-            STATE_MAP_ENTRY(Reflow::idle_state)
-            STATE_MAP_ENTRY(Reflow::preheat_state)
-            STATE_MAP_ENTRY(Reflow::soak_state)
-            STATE_MAP_ENTRY(Reflow::reflow_state)
-            STATE_MAP_ENTRY(Reflow::cool_state)
-            STATE_MAP_ENTRY(Reflow::complete_state)
-            STATE_MAP_ENTRY(Reflow::too_hot_state)
-            STATE_MAP_ENTRY(Reflow::error_state)
-        END_STATE_MAP
-       
+    BEGIN_STATE_MAP
+        STATE_MAP_ENTRY(Reflow::idle_state)
+        STATE_MAP_ENTRY(Reflow::preheat_state)
+        STATE_MAP_ENTRY(Reflow::soak_state)
+        STATE_MAP_ENTRY(Reflow::reflow_state)
+        STATE_MAP_ENTRY(Reflow::cool_state)
+        STATE_MAP_ENTRY(Reflow::complete_state)
+        STATE_MAP_ENTRY(Reflow::too_hot_state)
+        STATE_MAP_ENTRY(Reflow::error_state)
+    END_STATE_MAP
 };
 
 #endif
